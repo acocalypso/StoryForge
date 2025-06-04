@@ -9,7 +9,7 @@ import java.util.*
  * Export data models for book import/export functionality
  */
 @Serializable
-data class BookExportData(
+data class SimpleBookExportData(
     val version: String = "1.0",
     val exportedAt: Long = System.currentTimeMillis(),
     val books: List<SerializableBook>

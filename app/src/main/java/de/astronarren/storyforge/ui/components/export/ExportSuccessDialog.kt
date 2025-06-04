@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import de.astronarren.storyforge.util.ShareUtil
 import java.io.File
 
 /**
@@ -24,7 +25,6 @@ fun ExportSuccessDialog(
     exportedItemCount: Int,
     itemType: String = "items", // e.g., "chapters", "books"
     onDismiss: () -> Unit,
-    onShare: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -124,25 +124,28 @@ fun ExportSuccessDialog(
                         )
                     }
                 }
-                
-                // Action buttons
+                  // Action buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
                 ) {
-                    if (onShare != null) {
-                        OutlinedButton(
-                            onClick = onShare,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
+                    OutlinedButton(
+                        onClick = {
+                            ShareUtil.shareStoryForgeExport(
+                                context = context,
+                                filePath = filePath,
+                                exportType = "$exportedItemCount $itemType"
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Share")
-                        }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Share")
                     }
                     
                     Button(

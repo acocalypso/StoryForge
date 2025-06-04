@@ -202,16 +202,11 @@ fun BookDetailScreen(
         // Export success dialog
         exportState.result?.let { result ->
             when (result) {
-                is ExportResult.Success -> {
-                    ExportSuccessDialog(
+                is ExportResult.Success -> {                    ExportSuccessDialog(
                         filePath = result.filePath,
                         exportedItemCount = result.bookCount,
                         itemType = "chapters",
-                        onDismiss = { viewModel.clearExportResult() },
-                        onShare = {
-                            // TODO: Implement sharing functionality
-                            viewModel.clearExportResult()
-                        }
+                        onDismiss = { viewModel.clearExportResult() }
                     )
                 }
                 is ExportResult.Error -> {

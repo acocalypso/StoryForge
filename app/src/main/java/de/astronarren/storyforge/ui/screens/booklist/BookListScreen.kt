@@ -20,6 +20,9 @@ import de.astronarren.storyforge.ui.components.*
 import de.astronarren.storyforge.ui.components.NavigationDrawerContent
 import de.astronarren.storyforge.ui.components.DrawerSections
 import de.astronarren.storyforge.ui.components.export.ExportSuccessDialog
+import de.astronarren.storyforge.ui.components.importexport.ComprehensiveExportDialog
+import de.astronarren.storyforge.ui.components.importexport.ComprehensiveImportDialog
+import de.astronarren.storyforge.ui.components.importexport.ImportResultDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,6 +37,8 @@ fun BookListScreen(
     var showAnalytics by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
+    var showComprehensiveExportDialog by remember { mutableStateOf(false) }
+    var showComprehensiveImportDialog by remember { mutableStateOf(false) }
     var isSearchActive by remember { mutableStateOf(false) }
       // Navigation drawer state
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -51,11 +56,12 @@ fun BookListScreen(
                     viewModel.clearFilters()
                     viewModel.clearSearch()
                 }
-            ),
-            DrawerSections.createActionsSection(
+            ),            DrawerSections.createActionsSection(
                 onAnalytics = { showAnalytics = true },
                 onImport = { showImportDialog = true },
                 onExport = { showExportDialog = true },
+                onComprehensiveImport = { showComprehensiveImportDialog = true },
+                onComprehensiveExport = { showComprehensiveExportDialog = true },
                 onSettings = onNavigateToSettings,
                 onCreateNew = { showCreateDialog = true }
             )
@@ -329,17 +335,49 @@ fun BookListScreen(
                     viewModel.confirmImport()
                     showImportDialog = false
                 }            )
-        }
-          // Export success dialog
+        }        // Export success dialog
         uiState.exportResult?.let { result ->
             ExportSuccessDialog(
                 filePath = result.filePath,
                 exportedItemCount = result.bookCount,
                 itemType = "books",
-                onDismiss = { viewModel.clearExportResult() },
-                onShare = {
-                    // TODO: Implement sharing functionality
-                }
+                onDismiss = { viewModel.clearExportResult() }
+            )
+        }
+          // Comprehensive Export Dialog
+        if (showComprehensiveExportDialog) {
+            ComprehensiveExportDialog(
+                onExport = { filename ->
+                    viewModel.exportAllData(filename)
+                    showComprehensiveExportDialog = false
+                },
+                onDismiss = { showComprehensiveExportDialog = false }
+            )
+        }        // Comprehensive Import Dialog
+        if (showComprehensiveImportDialog) {
+            ComprehensiveImportDialog(
+                onImport = { uri, mode ->
+                    viewModel.importAllData(uri, mode)
+                    showComprehensiveImportDialog = false
+                },
+                onDismiss = { showComprehensiveImportDialog = false }
+            )
+        }
+          // Comprehensive Import Result Dialog
+        uiState.comprehensiveImportResult?.let { result: de.astronarren.storyforge.data.service.StoryForgeImportExportService.ImportResult ->
+            ImportResultDialog(
+                importResult = result,
+                onDismiss = { viewModel.clearComprehensiveImportResult() }
+            )
+        }
+        
+        // Comprehensive Export Success Dialog
+        uiState.comprehensiveExportResult?.let { filePath ->
+            ExportSuccessDialog(
+                filePath = filePath,
+                exportedItemCount = 1, // Represents the .storyforge file
+                itemType = "comprehensive data",
+                onDismiss = { viewModel.clearComprehensiveExportResult() }
             )
         }
     }

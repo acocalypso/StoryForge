@@ -13,6 +13,10 @@ import de.astronarren.storyforge.data.model.ImportResult
 import de.astronarren.storyforge.data.model.SortBy
 import de.astronarren.storyforge.data.repository.StoryForgeRepository
 import de.astronarren.storyforge.data.service.BookImportExportService
+import de.astronarren.storyforge.data.service.StoryForgeImportExportService
+import de.astronarren.storyforge.data.service.StoryForgeImportExportService.ImportMode
+import de.astronarren.storyforge.data.service.StoryForgeImportExportService.Result
+import de.astronarren.storyforge.data.service.StoryForgeImportExportService.ImportResult as ServiceImportResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +26,8 @@ import javax.inject.Inject
 @HiltViewModel
 class BookListViewModel @Inject constructor(
     private val repository: StoryForgeRepository,
-    private val importExportService: BookImportExportService
+    private val importExportService: BookImportExportService,
+    private val storyForgeImportExportService: de.astronarren.storyforge.data.service.StoryForgeImportExportService
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(BookListUiState())
@@ -316,9 +321,81 @@ class BookListViewModel @Inject constructor(
     fun clearImportPreview() {
         _uiState.value = _uiState.value.copy(importPreview = null)
     }
-    
-    fun clearExportResult() {
+      fun clearExportResult() {
         _uiState.value = _uiState.value.copy(exportResult = null)
+    }    /**
+     * Export all data to .storyforge format
+     */
+    fun exportAllData(fileName: String? = null) {
+        viewModelScope.launch {
+            try {
+                _uiState.value = _uiState.value.copy(isExportingAll = true, error = null)
+                
+                val result = storyForgeImportExportService.exportAllData(fileName = fileName)                
+                when (result) {
+                    is StoryForgeImportExportService.Result.Success -> {
+                        _uiState.value = _uiState.value.copy(
+                            isExportingAll = false,
+                            comprehensiveExportResult = result.data
+                        )
+                    }
+                    is StoryForgeImportExportService.Result.Error -> {
+                        _uiState.value = _uiState.value.copy(
+                            isExportingAll = false,
+                            error = "Export failed: ${result.message}"
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isExportingAll = false,
+                    error = "Export failed: ${e.message}"
+                )
+            }
+        }
+    }    /**
+     * Import data from .storyforge format
+     */
+    fun importAllData(fileUri: android.net.Uri, importMode: StoryForgeImportExportService.ImportMode) {
+        viewModelScope.launch {
+            try {
+                _uiState.value = _uiState.value.copy(isImportingAll = true, error = null)
+                
+                val result = storyForgeImportExportService.importData(
+                    fileUri = fileUri,
+                    importMode = importMode
+                )                
+                when (result) {
+                    is StoryForgeImportExportService.Result.Success -> {
+                        _uiState.value = _uiState.value.copy(
+                            isImportingAll = false,
+                            comprehensiveImportResult = result.data
+                        )
+                        // Refresh the book list
+                        loadBooks()
+                    }
+                    is StoryForgeImportExportService.Result.Error -> {
+                        _uiState.value = _uiState.value.copy(
+                            isImportingAll = false,
+                            error = "Import failed: ${result.message}"
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isImportingAll = false,
+                    error = "Import failed: ${e.message}"
+                )
+            }
+        }
+    }
+    
+    fun clearComprehensiveExportResult() {
+        _uiState.value = _uiState.value.copy(comprehensiveExportResult = null)
+    }
+    
+    fun clearComprehensiveImportResult() {
+        _uiState.value = _uiState.value.copy(comprehensiveImportResult = null)
     }
     
     fun getAvailableGenres(): List<String> {
@@ -342,7 +419,12 @@ data class BookListUiState(
     val isImporting: Boolean = false,
     val exportResult: ExportResult.Success? = null,
     val importPreview: List<Book>? = null,
-    val showImportSuccess: Boolean = false
+    val showImportSuccess: Boolean = false,
+    // Comprehensive Import/Export states
+    val isExportingAll: Boolean = false,
+    val isImportingAll: Boolean = false,
+    val comprehensiveExportResult: String? = null,
+    val comprehensiveImportResult: ServiceImportResult? = null
 ) {
     // Backward compatibility properties
     val searchQuery: String get() = searchCriteria.searchQuery

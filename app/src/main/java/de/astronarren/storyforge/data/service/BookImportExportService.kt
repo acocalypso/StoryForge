@@ -166,10 +166,9 @@ class BookImportExportService @Inject constructor(
             inputStream.bufferedReader().readText()
         } ?: throw IOException("Could not read file")
     }
-    
-    private fun parseImportContent(content: String): BookExportData {
+      private fun parseImportContent(content: String): SimpleBookExportData {
         return try {
-            json.decodeFromString<BookExportData>(content)
+            json.decodeFromString<SimpleBookExportData>(content)
         } catch (e: Exception) {
             // Try to parse as legacy format or throw meaningful error
             throw IOException("Invalid import file format. Please ensure the file is a valid StoryForge export.")

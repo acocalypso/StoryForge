@@ -164,13 +164,14 @@ object DrawerSections {
             actions = actions
         )
     }
-    
-    fun createActionsSection(
+      fun createActionsSection(
         onSearch: (() -> Unit)? = null,
         onAdvancedSearch: (() -> Unit)? = null,
         onAnalytics: (() -> Unit)? = null,
         onImport: (() -> Unit)? = null,
         onExport: (() -> Unit)? = null,
+        onComprehensiveImport: (() -> Unit)? = null,
+        onComprehensiveExport: (() -> Unit)? = null,
         onSettings: (() -> Unit)? = null,
         onCreateNew: (() -> Unit)? = null
     ): DrawerSection {
@@ -223,12 +224,31 @@ object DrawerSections {
                 )
             )
         }
-        
-        onExport?.let {
+          onExport?.let {
             actions.add(
                 DrawerAction(
                     title = "Export",
                     icon = Icons.Filled.Upload,
+                    onClick = it
+                )
+            )
+        }
+        
+        onComprehensiveImport?.let {
+            actions.add(
+                DrawerAction(
+                    title = "Import All Data",
+                    icon = Icons.Filled.CloudDownload,
+                    onClick = it
+                )
+            )
+        }
+        
+        onComprehensiveExport?.let {
+            actions.add(
+                DrawerAction(
+                    title = "Export All Data",
+                    icon = Icons.Filled.CloudUpload,
                     onClick = it
                 )
             )

@@ -142,16 +142,11 @@ fun ChapterListScreen(
     // Export success dialog
     uiState.exportResult?.let { result ->
         when (result) {
-            is ExportResult.Success -> {
-                ExportSuccessDialog(
+            is ExportResult.Success -> {                ExportSuccessDialog(
                     filePath = result.filePath,
                     exportedItemCount = result.bookCount,
                     itemType = "chapters",
-                    onDismiss = { viewModel.clearExportResult() },
-                    onShare = {
-                        // TODO: Implement sharing functionality
-                        viewModel.clearExportResult()
-                    }
+                    onDismiss = { viewModel.clearExportResult() }
                 )
             }
             is ExportResult.Error -> {
