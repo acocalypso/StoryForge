@@ -79,7 +79,7 @@ UI Layer (Compose) → ViewModel → Repository → Database (Room)
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/StoryForge.git
+   git clone https://github.com/acocalypso/StoryForge.git
    cd StoryForge
    ```
 
