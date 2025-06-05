@@ -165,13 +165,9 @@ fun ComprehensiveExportDialog(
                             text = "• Compatible with all StoryForge versions",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )                        Text(
-                            text = "• Can be shared and imported on other devices",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "• Saved to Documents/StoryForge/backup folder",
+                            text = "• Can be shared and imported on other devices",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
