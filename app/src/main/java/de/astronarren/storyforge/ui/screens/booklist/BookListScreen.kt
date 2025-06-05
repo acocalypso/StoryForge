@@ -27,16 +27,13 @@ import de.astronarren.storyforge.ui.components.importexport.ImportResultDialog
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookListScreen(
-    onBookClick: (String) -> Unit,
-    onCreateBook: () -> Unit,
-    onNavigateToSettings: () -> Unit,
+    onBookClick: (String) -> Unit,    onNavigateToSettings: () -> Unit,
     viewModel: BookListViewModel = hiltViewModel()
-) {    val uiState by viewModel.uiState.collectAsState()
+) {
+    val uiState by viewModel.uiState.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
     var showAdvancedSearch by remember { mutableStateOf(false) }
     var showAnalytics by remember { mutableStateOf(false) }
-    var showExportDialog by remember { mutableStateOf(false) }
-    var showImportDialog by remember { mutableStateOf(false) }
     var showComprehensiveExportDialog by remember { mutableStateOf(false) }
     var showComprehensiveImportDialog by remember { mutableStateOf(false) }
     var isSearchActive by remember { mutableStateOf(false) }
@@ -45,21 +42,17 @@ fun BookListScreen(
     val scope = rememberCoroutineScope()
       // Create drawer sections (without search)
     val drawerSections = remember(uiState.showFavoritesOnly, uiState.searchQuery, uiState.searchCriteria) {
-        listOf(
-            DrawerSections.createFilterSection(
+        listOf(            DrawerSections.createFilterSection(
                 showOnlyMainCharacters = false, // Not applicable for books
                 onToggleMainCharacters = { }, // Not applicable 
                 showFavoritesOnly = uiState.showFavoritesOnly,
                 onToggleFavorites = { viewModel.toggleFavoritesFilter() },
-                searchQuery = uiState.searchQuery,
                 onClearFilters = { 
                     viewModel.clearFilters()
                     viewModel.clearSearch()
                 }
-            ),            DrawerSections.createActionsSection(
+            ),DrawerSections.createActionsSection(
                 onAnalytics = { showAnalytics = true },
-                onImport = { showImportDialog = true },
-                onExport = { showExportDialog = true },
                 onComprehensiveImport = { showComprehensiveImportDialog = true },
                 onComprehensiveExport = { showComprehensiveExportDialog = true },
                 onSettings = onNavigateToSettings,
@@ -306,36 +299,9 @@ fun BookListScreen(
             AnalyticsDashboardDialog(
                 analytics = viewModel.getAnalytics(),
                 onDismiss = { showAnalytics = false }
-            )
-        }
+            )        }
         
-        if (showExportDialog) {
-            ExportDialog(
-                availableGenres = viewModel.getAvailableGenres(),
-                onExport = { options ->
-                    viewModel.exportBooks(options)
-                    showExportDialog = false
-                },
-                onDismiss = { showExportDialog = false },
-                isLoading = uiState.isExporting
-            )
-        }
-          if (showImportDialog) {
-            ImportDialog(
-                onImport = { uri ->
-                    viewModel.importBooks(uri)
-                },
-                onDismiss = { 
-                    showImportDialog = false
-                    viewModel.clearImportPreview()
-                },
-                isLoading = uiState.isImporting,
-                importPreview = uiState.importPreview,
-                onConfirmImport = {
-                    viewModel.confirmImport()
-                    showImportDialog = false
-                }            )
-        }        // Export success dialog
+        // Export success dialog
         uiState.exportResult?.let { result ->
             ExportSuccessDialog(
                 filePath = result.filePath,

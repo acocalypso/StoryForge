@@ -61,14 +61,12 @@ fun CharacterListScreen(
         viewModel.clearError()
     }    // Create drawer sections (without search)
     val drawerSections = remember(uiState.showOnlyMainCharacters, uiState.searchQuery) {
-        listOf(
-            DrawerSections.createFilterSection(
+        listOf(            DrawerSections.createFilterSection(
                 showOnlyMainCharacters = uiState.showOnlyMainCharacters,
                 onToggleMainCharacters = {
                     haptic.performHapticFeedback(de.astronarren.storyforge.ui.components.haptic.HapticFeedbackType.LightTap)
                     viewModel.toggleMainCharactersFilter()
                 },
-                searchQuery = uiState.searchQuery,
                 onClearFilters = {
                     viewModel.clearSearch()
                     if (uiState.showOnlyMainCharacters) {

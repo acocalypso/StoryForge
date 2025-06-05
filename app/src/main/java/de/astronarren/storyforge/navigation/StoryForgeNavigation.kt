@@ -27,9 +27,6 @@ fun StoryForgeNavigation(
                 onBookClick = { bookId ->
                     navController.navigate(Screen.BookDetail(bookId))
                 },
-                onCreateBook = {
-                    // Create new book and navigate to it
-                },
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings)
                 }

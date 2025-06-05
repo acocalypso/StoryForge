@@ -2,6 +2,8 @@ package de.astronarren.storyforge.data.service
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.astronarren.storyforge.data.database.StoryForgeDatabase
 import de.astronarren.storyforge.data.repository.StoryForgeRepository
@@ -84,22 +86,34 @@ class StoryForgeImportExportService @Inject constructor(
         } catch (e: Exception) {
             ImportResult.Error("Import failed: ${e.message}", e)
         }
-    }
-
-    /**
-     * Export all data - alias for exportDatabase for ViewModel compatibility
+    }    /**
+     * Export all data - exports the database file to Documents/StoryForge/Backup
      */
     suspend fun exportAllData(fileName: String? = null): Result<String> {
         return try {
-            // For now, we'll create a temporary URI for the export
-            // In a real implementation, this would use the provided fileName
-            val tempFile = File(context.cacheDir, fileName ?: "storyforge_export_${System.currentTimeMillis()}.db")
-            val tempUri = android.net.Uri.fromFile(tempFile)
+            // Create backup directory in Documents/StoryForge/Backup
+            val baseDir = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // Android 10+ - Use app-specific external files directory
+                File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "StoryForge/Backup")
+            } else {
+                // Pre-Android 10 - Use public Downloads directory  
+                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                File(downloadsDir, "StoryForge/Backup")
+            }
             
-            val result = exportDatabase(tempUri)
-            when (result) {
-                is Result.Success -> Result.Success(tempFile.absolutePath)
-                is Result.Error -> result
+            baseDir.mkdirs()
+            
+            // Generate file name with timestamp if not provided
+            val actualFileName = fileName ?: "storyforge_backup_${System.currentTimeMillis()}.db"
+            val backupFile = File(baseDir, actualFileName)
+            
+            // Copy current database to backup location
+            val dbFile = context.getDatabasePath("storyforge_database")
+            if (dbFile.exists()) {
+                dbFile.copyTo(backupFile, overwrite = true)
+                Result.Success(backupFile.absolutePath)
+            } else {
+                Result.Error("Database file not found", RuntimeException("Database file does not exist"))
             }
         } catch (e: Exception) {
             Result.Error("Export failed: ${e.message}", e)
@@ -170,16 +184,11 @@ class StoryForgeImportExportService @Inject constructor(
         } catch (e: Exception) {
             Result.Error("Database backup export failed: ${e.message}", e)
         }
-    }
-
-    private suspend fun importDatabaseBackup(inputUri: Uri, replaceExisting: Boolean, mode: ImportMode): ImportResult {
+    }    private suspend fun importDatabaseBackup(inputUri: Uri, replaceExisting: Boolean, mode: ImportMode): ImportResult {
         return try {
             val dbFile = getDatabaseFile()
             
             if (replaceExisting) {
-                // Get count before import for statistics
-                val beforeCounts = getEntityCounts()
-                
                 // Close the database connection
                 database.close()
                 
@@ -265,11 +274,12 @@ class StoryForgeImportExportService @Inject constructor(
             "CREATE TABLE IF NOT EXISTS timeline_events AS SELECT * FROM timeline_events WHERE bookId = '$bookId';",
             "CREATE TABLE IF NOT EXISTS character_relationships AS SELECT * FROM character_relationships WHERE character1Id IN (SELECT id FROM characters WHERE bookId = '$bookId') OR character2Id IN (SELECT id FROM characters WHERE bookId = '$bookId');"
         )
-    }
-
+    }    @Suppress("UNUSED_PARAMETER")
     private fun exportPartialDatabase(outputFile: File, queries: List<String>) {
         // This would need to be implemented using SQLite command execution
-        // For now, this is a placeholder for the concept        throw UnsupportedOperationException("Partial database export not fully implemented")
+        // For now, this is a placeholder for the concept
+        // Note: outputFile and queries parameters are placeholders for future implementation
+        throw UnsupportedOperationException("Partial database export not fully implemented")
     }
 
     /**

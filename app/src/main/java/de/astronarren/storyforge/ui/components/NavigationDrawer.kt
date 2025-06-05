@@ -114,14 +114,11 @@ private fun DrawerSectionItem(
 
 // Helper functions for common drawer sections
 object DrawerSections {
-    
-    fun createFilterSection(
+      fun createFilterSection(
         showOnlyMainCharacters: Boolean,
         onToggleMainCharacters: () -> Unit,
         showFavoritesOnly: Boolean? = null,
         onToggleFavorites: (() -> Unit)? = null,
-        searchQuery: String = "",
-        onSearchQueryChange: ((String) -> Unit)? = null,
         onClearFilters: (() -> Unit)? = null
     ): DrawerSection {
         val actions = mutableListOf<DrawerAction>()
@@ -147,9 +144,8 @@ object DrawerSections {
                 )
             )
         }
-        
-        // Clear filters action
-        if (onClearFilters != null && (showOnlyMainCharacters || searchQuery.isNotEmpty() || showFavoritesOnly == true)) {
+          // Clear filters action
+        if (onClearFilters != null && (showOnlyMainCharacters || showFavoritesOnly == true)) {
             actions.add(
                 DrawerAction(
                     title = "Clear All Filters",
@@ -163,13 +159,10 @@ object DrawerSections {
             title = "Filters",
             actions = actions
         )
-    }
-      fun createActionsSection(
+    }    fun createActionsSection(
         onSearch: (() -> Unit)? = null,
         onAdvancedSearch: (() -> Unit)? = null,
         onAnalytics: (() -> Unit)? = null,
-        onImport: (() -> Unit)? = null,
-        onExport: (() -> Unit)? = null,
         onComprehensiveImport: (() -> Unit)? = null,
         onComprehensiveExport: (() -> Unit)? = null,
         onSettings: (() -> Unit)? = null,
@@ -204,31 +197,11 @@ object DrawerSections {
                     onClick = it
                 )
             )        }
-        
-        onAnalytics?.let {
+          onAnalytics?.let {
             actions.add(
                 DrawerAction(
                     title = "Analytics",
                     icon = Icons.Filled.Analytics,
-                    onClick = it
-                )
-            )
-        }
-        
-        onImport?.let {
-            actions.add(
-                DrawerAction(
-                    title = "Import",
-                    icon = Icons.Filled.Download,
-                    onClick = it
-                )
-            )
-        }
-          onExport?.let {
-            actions.add(
-                DrawerAction(
-                    title = "Export",
-                    icon = Icons.Filled.Upload,
                     onClick = it
                 )
             )
