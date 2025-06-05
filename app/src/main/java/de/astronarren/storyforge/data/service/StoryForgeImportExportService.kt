@@ -1,9 +1,12 @@
 package de.astronarren.storyforge.data.service
 
+import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.MediaStore
+import androidx.annotation.RequiresApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.astronarren.storyforge.data.database.StoryForgeDatabase
 import de.astronarren.storyforge.data.repository.StoryForgeRepository
@@ -87,36 +90,84 @@ class StoryForgeImportExportService @Inject constructor(
             ImportResult.Error("Import failed: ${e.message}", e)
         }
     }    /**
-     * Export all data - exports the database file to Documents/StoryForge/Backup
+     * Export all data - exports the database file to Documents/StoryForge/backup
      */
     suspend fun exportAllData(fileName: String? = null): Result<String> {
         return try {
-            // Create backup directory in Documents/StoryForge/Backup
-            val baseDir = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // Android 10+ - Use app-specific external files directory
-                File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "StoryForge/Backup")
-            } else {
-                // Pre-Android 10 - Use public Downloads directory  
-                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                File(downloadsDir, "StoryForge/Backup")
-            }
-            
-            baseDir.mkdirs()
-            
             // Generate file name with timestamp if not provided
             val actualFileName = fileName ?: "storyforge_backup_${System.currentTimeMillis()}.db"
-            val backupFile = File(baseDir, actualFileName)
             
-            // Copy current database to backup location
+            // Get current database file
             val dbFile = context.getDatabasePath("storyforge_database")
-            if (dbFile.exists()) {
-                dbFile.copyTo(backupFile, overwrite = true)
-                Result.Success(backupFile.absolutePath)
-            } else {
-                Result.Error("Database file not found", RuntimeException("Database file does not exist"))
+            if (!dbFile.exists()) {
+                return Result.Error("Database file not found", RuntimeException("Database file does not exist"))
             }
+            
+            // Read database content
+            val dbContent = dbFile.readBytes()
+            
+            // Save to user-accessible Documents/StoryForge/backup folder
+            val saveResult = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // Android 10+ - Use MediaStore to save to Documents/StoryForge/backup
+                saveBackupViaMediaStore(actualFileName, dbContent)
+            } else {
+                // Pre-Android 10 - Use legacy method to save to Documents/StoryForge/backup
+                saveBackupViaLegacy(actualFileName, dbContent)
+            }
+            
+            saveResult.fold(
+                onSuccess = { path -> Result.Success(path) },
+                onFailure = { e -> Result.Error("Export failed: ${e.message}", e) }
+            )
         } catch (e: Exception) {
             Result.Error("Export failed: ${e.message}", e)
+        }
+    }
+    
+    /**
+     * Save backup using MediaStore for Android 10+ to user-accessible Documents folder
+     */
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun saveBackupViaMediaStore(fileName: String, content: ByteArray): kotlin.Result<String> {
+        val resolver = context.contentResolver
+        val contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, "Documents/StoryForge/backup")
+        }
+
+        return try {
+            val uri = resolver.insert(MediaStore.Files.getContentUri("external"), contentValues)
+            uri?.let {
+                resolver.openOutputStream(it)?.use { stream ->
+                    stream.write(content)
+                }
+                kotlin.Result.success("Documents/StoryForge/backup/$fileName")
+            } ?: kotlin.Result.failure(Exception("Failed to create backup file URI"))
+        } catch (e: Exception) {
+            kotlin.Result.failure(e)
+        }
+    }
+    
+    /**
+     * Save backup using legacy method for Android 9 and below
+     */
+    private fun saveBackupViaLegacy(fileName: String, content: ByteArray): kotlin.Result<String> {
+        val backupDir = File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
+            "StoryForge/backup"
+        )
+        
+        if (!backupDir.exists()) {
+            backupDir.mkdirs()
+        }
+        
+        val backupFile = File(backupDir, fileName)
+        return try {
+            backupFile.writeBytes(content)
+            kotlin.Result.success(backupFile.absolutePath)
+        } catch (e: Exception) {
+            kotlin.Result.failure(e)
         }
     }
 

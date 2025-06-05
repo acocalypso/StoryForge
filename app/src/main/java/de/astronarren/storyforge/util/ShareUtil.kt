@@ -33,11 +33,10 @@ object ShareUtil {
                 // File doesn't exist, show error
                 return
             }
-            
-            // Create a content URI using FileProvider for secure sharing
+              // Create a content URI using FileProvider for secure sharing
             val fileUri = FileProvider.getUriForFile(
                 context,
-                "${context.packageName}.provider",
+                "${context.packageName}.fileprovider",
                 file
             )
             
@@ -94,11 +93,10 @@ object ShareUtil {
         val file = File(filePath)
         val mimeType = getMimeType(filePath)
         val shareTitle = "Share StoryForge Export"
-        
-        try {
+          try {
             val fileUri = FileProvider.getUriForFile(
                 context,
-                "${context.packageName}.provider",
+                "${context.packageName}.fileprovider",
                 file
             )
             
