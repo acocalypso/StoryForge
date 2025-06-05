@@ -366,14 +366,15 @@ Storage & Export
 
 Enhancements
     ✅ Share button in the export pop up success screen has no function - FIXED
-    ⏳ Import / Export in the Navigation should allow users to export or import all books with their scences, characters, etc and let them import the file. It should be done on database level
+    ✅ Import / Export in the Navigation should allow users to export or import all books with their scences, characters, etc and let them import the file. It should be done on database level
     ⏳ Implement Material Design 3 component updates
     ⏳ Add accessibility improvements (screen reader support, high contrast)
 
 User Interface Polish
     ⏳ Create onboarding tutorial system for first-time users
     ⏳ Implement Material Design 3 component updates
-    ⏳ Add accessibility improvements (screen reader support, high contrast)
+    ⏳ Improve Texteditor with Spelling correction & Voice to Text
+    ⏳ Multi Language Support English & German (Settings should contain a language selection)
 
 Deployment Preparation
     ⏳ Create automated screenshot testing for UI components

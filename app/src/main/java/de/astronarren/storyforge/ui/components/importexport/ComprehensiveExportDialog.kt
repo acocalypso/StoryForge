@@ -156,7 +156,8 @@ fun ComprehensiveExportDialog(
                             text = "File Information",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Medium
-                        )                        Text(
+                        )
+                        Text(
                             text = "• Format: .db (Database backup)",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant

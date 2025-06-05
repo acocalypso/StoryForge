@@ -324,8 +324,9 @@ class StoryForgeImportExportService @Inject constructor(
             "CREATE TABLE IF NOT EXISTS scenes AS SELECT * FROM scenes WHERE bookId = '$bookId';",
             "CREATE TABLE IF NOT EXISTS timeline_events AS SELECT * FROM timeline_events WHERE bookId = '$bookId';",
             "CREATE TABLE IF NOT EXISTS character_relationships AS SELECT * FROM character_relationships WHERE character1Id IN (SELECT id FROM characters WHERE bookId = '$bookId') OR character2Id IN (SELECT id FROM characters WHERE bookId = '$bookId');"
-        )
-    }    @Suppress("UNUSED_PARAMETER")
+        )    }
+
+    @Suppress("UNUSED_PARAMETER")
     private fun exportPartialDatabase(outputFile: File, queries: List<String>) {
         // This would need to be implemented using SQLite command execution
         // For now, this is a placeholder for the concept

@@ -1004,11 +1004,11 @@ class ChapterExportService @Inject constructor(
                 val newPage = pdfDocument.startPage(pageInfo)
                 val newCanvas = newPage.canvas
                 onNewPage(newPage, newCanvas)
-                Pair(80f, newCanvas)
-            } else {
+                Pair(80f, newCanvas)            } else {
                 Pair(requiredY, currentCanvas)
             }
-        }        
+        }
+        
         // Create different paint styles for formatted text
         val headerPaint1 = Paint(bodyPaint).apply {
             textSize = 16f
@@ -1044,7 +1044,8 @@ class ChapterExportService @Inject constructor(
                 trimmedLine.startsWith("### ") -> 16f
                 else -> 16f
             }
-              if (currentY + estimatedLineHeight > pageHeight - bottomMargin) {
+            
+            if (currentY + estimatedLineHeight > pageHeight - bottomMargin) {
                 val pageResult = checkAndHandleNewPage(currentY + estimatedLineHeight)
                 currentY = pageResult.first
                 currentCanvas = pageResult.second
@@ -1057,7 +1058,7 @@ class ChapterExportService @Inject constructor(
                 }
                 
                 // Headers
-                trimmedLine.startsWith("### ") -> {                
+                trimmedLine.startsWith("### ") -> {
                     val headerText = trimmedLine.removePrefix("### ")
                     currentY = drawWrappedText(
                         canvas = currentCanvas,
@@ -1073,7 +1074,9 @@ class ChapterExportService @Inject constructor(
                         pageResult.first
                     }
                     currentY += 8f
-                }                trimmedLine.startsWith("## ") -> {
+                }
+                
+                trimmedLine.startsWith("## ") -> {
                     val headerText = trimmedLine.removePrefix("## ")
                     currentY = drawWrappedText(
                         canvas = currentCanvas,
@@ -1089,7 +1092,9 @@ class ChapterExportService @Inject constructor(
                         pageResult.first
                     }
                     currentY += 10f
-                }                trimmedLine.startsWith("# ") -> {
+                }
+                
+                trimmedLine.startsWith("# ") -> {
                     val headerText = trimmedLine.removePrefix("# ")
                     currentY = drawWrappedText(
                         canvas = currentCanvas,
@@ -1105,7 +1110,8 @@ class ChapterExportService @Inject constructor(
                         pageResult.first
                     }
                     currentY += 12f
-                }                  // Quotes
+                }                
+                // Quotes
                 trimmedLine.startsWith("> ") -> {
                     val quoteText = "  ${trimmedLine.removePrefix("> ")}"
                     currentY = drawWrappedText(
@@ -1123,7 +1129,8 @@ class ChapterExportService @Inject constructor(
                     }
                     currentY += 4f
                 }
-                  // Lists
+                
+                // Lists
                 trimmedLine.startsWith("- ") -> {
                     val listText = "  • ${trimmedLine.removePrefix("- ")}"
                     currentY = drawWrappedText(
@@ -1140,11 +1147,12 @@ class ChapterExportService @Inject constructor(
                         pageResult.first
                     }
                     currentY += 4f
-                }                trimmedLine.matches(Regex("^\\d+\\. .*") ) -> {
+                }                
+                // Numbered lists
+                trimmedLine.matches(Regex("^\\d+\\. .*")) -> {
                     val numberPattern = Regex("^(\\d+)\\. (.*)")
                     val matchResult = numberPattern.find(trimmedLine)
-                    
-                    if (matchResult != null) {
+                      if (matchResult != null) {
                         val number = matchResult.groupValues[1]
                         val listText = matchResult.groupValues[2]
                         val numberedText = "  $number. $listText"
@@ -1163,7 +1171,8 @@ class ChapterExportService @Inject constructor(
                             pageResult.first
                         }
                         currentY += 4f
-                    }                }
+                    }
+                }
                 
                 else -> {
                     currentY = drawFormattedText(

@@ -89,11 +89,11 @@ object ShareUtil {
         context: Context,
         filePath: String,
         exportType: String
-    ) {
-        val file = File(filePath)
+    ) {        val file = File(filePath)
         val mimeType = getMimeType(filePath)
         val shareTitle = "Share StoryForge Export"
-          try {
+        
+        try {
             val fileUri = FileProvider.getUriForFile(
                 context,
                 "${context.packageName}.fileprovider",
