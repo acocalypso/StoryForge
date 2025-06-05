@@ -156,9 +156,8 @@ fun ComprehensiveExportDialog(
                             text = "File Information",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = "• Format: .storyforge (JSON-based)",
+                        )                        Text(
+                            text = "• Format: .db (Database backup)",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -166,9 +165,13 @@ fun ComprehensiveExportDialog(
                             text = "• Compatible with all StoryForge versions",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )                        Text(
+                            text = "• Can be shared and imported on other devices",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "• Can be shared and imported on other devices",
+                            text = "• Saved to Documents/StoryForge/backup folder",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
