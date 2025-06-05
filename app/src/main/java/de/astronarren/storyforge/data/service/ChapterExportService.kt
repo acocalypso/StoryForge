@@ -482,6 +482,7 @@ class ChapterExportService @Inject constructor(
      * Adds page numbering to a DOCX document
      * Note: Full page numbering support requires Apache POI extensions
      */
+    @Suppress("UNUSED_PARAMETER")
     private fun addPageNumbering(document: XWPFDocument) {
         // TODO: Implement proper page numbering with Apache POI
         // For now, this is a placeholder that doesn't break the build
@@ -689,8 +690,7 @@ class ChapterExportService @Inject constructor(
         val title: String,
         val content: String
     )
-    
-    /**
+      /**
      * Generates a PDF document with the given content
      */
     private fun generatePdfDocument(
@@ -723,21 +723,197 @@ class ChapterExportService @Inject constructor(
                 isAntiAlias = true
             }
             
+            val authorPaint = Paint().apply {
+                color = Color.BLACK
+                textSize = 16f
+                isAntiAlias = true
+            }
+            
+            val descriptionPaint = Paint().apply {
+                color = Color.GRAY
+                textSize = 12f
+                isAntiAlias = true
+            }
+            
+            val tocHeaderPaint = Paint().apply {
+                color = Color.BLACK
+                textSize = 18f
+                isAntiAlias = true
+                isFakeBoldText = true
+            }
+            
+            val tocEntryPaint = Paint().apply {
+                color = Color.BLACK
+                textSize = 12f
+                isAntiAlias = true
+            }
+            
             val leftMargin = 50f
             val rightMargin = 545f
-            val pageHeight = 792f
+            val pageWidth = 595f
+            val pageHeight = 842f
             val bottomMargin = 50f
+            val centerX = pageWidth / 2f
             
             // Create first page
             var currentPage = pdfDocument.startPage(pageInfo)
             var canvas = currentPage.canvas
             var yPosition = 80f
             
-            // Draw title
-            canvas.drawText(title, leftMargin, yPosition, titlePaint)
-            yPosition += 50f
+            // Add cover image if available (for book exports)
+            if (book?.coverImagePath != null) {
+                val coverImage = loadCoverImage(book.coverImagePath)
+                if (coverImage != null) {
+                    try {
+                        // Calculate image dimensions to fit on page with proper aspect ratio
+                        val maxImageWidth = 300f
+                        val maxImageHeight = 400f
+                        val imageAspectRatio = coverImage.width.toFloat() / coverImage.height.toFloat()
+                        
+                        val imageWidth: Float
+                        val imageHeight: Float
+                        
+                        if (imageAspectRatio > maxImageWidth / maxImageHeight) {
+                            imageWidth = maxImageWidth
+                            imageHeight = maxImageWidth / imageAspectRatio
+                        } else {
+                            imageHeight = maxImageHeight
+                            imageWidth = maxImageHeight * imageAspectRatio
+                        }
+                        
+                        val imageX = centerX - imageWidth / 2f
+                        val imageY = yPosition
+                        
+                        // Draw the cover image
+                        val imageRect = Rect(
+                            imageX.toInt(),
+                            imageY.toInt(),
+                            (imageX + imageWidth).toInt(),
+                            (imageY + imageHeight).toInt()
+                        )
+                        canvas.drawBitmap(coverImage, null, imageRect, null)
+                        
+                        yPosition += imageHeight + 30f
+                        
+                        // Start new page after cover image
+                        if (yPosition > pageHeight - bottomMargin - 200) {
+                            pdfDocument.finishPage(currentPage)
+                            currentPage = pdfDocument.startPage(pageInfo)
+                            canvas = currentPage.canvas
+                            yPosition = 80f
+                        }
+                        
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        // Continue without cover image if there's an error
+                    }
+                }
+            }
             
-            // Draw metadata if available
+            // Create title page with centered content
+            // Draw main title
+            val titleBounds = Rect()
+            titlePaint.getTextBounds(title, 0, title.length, titleBounds)
+            val titleX = centerX - titleBounds.width() / 2f
+            canvas.drawText(title, titleX, yPosition, titlePaint)
+            yPosition += 60f
+            
+            // Add author if available (for book exports)
+            if (book != null && book.author.isNotBlank()) {
+                val authorText = "by ${book.author}"
+                val authorBounds = Rect()
+                authorPaint.getTextBounds(authorText, 0, authorText.length, authorBounds)
+                val authorX = centerX - authorBounds.width() / 2f
+                canvas.drawText(authorText, authorX, yPosition, authorPaint)
+                yPosition += 40f
+            }
+              // Add description if available (for book exports)
+            if (book != null && book.description.isNotBlank()) {
+                yPosition += 20f
+                
+                // Word wrap the description text
+                yPosition = drawWrappedTextCentered(
+                    canvas = canvas,
+                    text = book.description,
+                    paint = descriptionPaint,
+                    centerX = centerX,
+                    startY = yPosition,
+                    maxWidth = 400f,
+                    lineHeight = 18f
+                ) { newY ->
+                    if (newY > pageHeight - bottomMargin) {
+                        pdfDocument.finishPage(currentPage)
+                        val newPage = pdfDocument.startPage(pageInfo)
+                        currentPage = newPage
+                        canvas = newPage.canvas
+                        80f
+                    } else {
+                        newY
+                    }
+                }
+                yPosition += 30f
+            }
+            
+            // Add Table of Contents if multiple chapters
+            if (content.size > 1) {
+                // Start new page for TOC
+                pdfDocument.finishPage(currentPage)
+                currentPage = pdfDocument.startPage(pageInfo)
+                canvas = currentPage.canvas
+                yPosition = 80f
+                
+                // TOC Header
+                val tocHeaderText = "Table of Contents"
+                val tocHeaderBounds = Rect()
+                tocHeaderPaint.getTextBounds(tocHeaderText, 0, tocHeaderText.length, tocHeaderBounds)
+                val tocHeaderX = centerX - tocHeaderBounds.width() / 2f
+                canvas.drawText(tocHeaderText, tocHeaderX, yPosition, tocHeaderPaint)
+                yPosition += 50f
+                
+                // TOC Entries
+                content.forEachIndexed { index, chapter ->
+                    if (yPosition > pageHeight - bottomMargin - 30) {
+                        pdfDocument.finishPage(currentPage)
+                        currentPage = pdfDocument.startPage(pageInfo)
+                        canvas = currentPage.canvas
+                        yPosition = 80f
+                    }
+                    
+                    val chapterNumber = "${index + 1}."
+                    val chapterTitle = chapter.title
+                    val pageNumber = "${index + 3}" // Approximate page numbers (cover + title + TOC + chapters)
+                    
+                    // Draw chapter number and title on the left
+                    canvas.drawText("$chapterNumber $chapterTitle", leftMargin, yPosition, tocEntryPaint)
+                    
+                    // Draw dots and page number on the right
+                    val dotsAndPageText = ".......................... $pageNumber"
+                    val textBounds = Rect()
+                    tocEntryPaint.getTextBounds(dotsAndPageText, 0, dotsAndPageText.length, textBounds)
+                    canvas.drawText(dotsAndPageText, rightMargin - textBounds.width(), yPosition, tocEntryPaint)
+                    
+                    yPosition += 25f
+                }
+                
+                // Start new page for content
+                pdfDocument.finishPage(currentPage)
+                currentPage = pdfDocument.startPage(pageInfo)
+                canvas = currentPage.canvas
+                yPosition = 80f
+            } else {
+                // For single chapter or if no TOC needed, just add some space after title page
+                yPosition += 50f
+                
+                // Start new page for content if close to bottom
+                if (yPosition > pageHeight - bottomMargin - 200) {
+                    pdfDocument.finishPage(currentPage)
+                    currentPage = pdfDocument.startPage(pageInfo)
+                    canvas = currentPage.canvas
+                    yPosition = 80f
+                }
+            }
+            
+            // Draw metadata if available (for compatibility with existing code)
             if (metadata != null) {
                 val metadataPaint = Paint().apply {
                     color = Color.GRAY
@@ -751,8 +927,7 @@ class ChapterExportService @Inject constructor(
                 }
                 yPosition += 20f
             }
-            
-            // Process each chapter
+              // Process each chapter
             content.forEach { chapter ->
                 // Check if we need a new page for chapter header
                 if (yPosition > pageHeight - bottomMargin - 100) {
@@ -765,61 +940,308 @@ class ChapterExportService @Inject constructor(
                 // Draw chapter title
                 canvas.drawText(chapter.title, leftMargin, yPosition, headerPaint)
                 yPosition += 30f
-                
-                // Process chapter content
+                  // Process chapter content with rich text formatting
                 val richTextContent = try {
                     Json.decodeFromString<RichTextDocument>(chapter.content)
                 } catch (e: Exception) {
                     RichTextDocument.fromPlainText(chapter.content)
                 }
                 
-                val plainText = RichTextFormatter.toPlainText(richTextContent)
-                val lines = plainText.split('\n')
-                
-                lines.forEach { line ->
-                    // Check if we need a new page
-                    if (yPosition > pageHeight - bottomMargin) {
-                        pdfDocument.finishPage(currentPage)
-                        currentPage = pdfDocument.startPage(pageInfo)
-                        canvas = currentPage.canvas
-                        yPosition = 80f
-                    }
-                    
-                    // Draw line with word wrapping if needed
-                    yPosition = drawWrappedText(
-                        canvas = canvas,
-                        text = line,
-                        paint = bodyPaint,
-                        startX = leftMargin,
-                        startY = yPosition,
-                        maxWidth = rightMargin - leftMargin,
-                        lineHeight = 16f
-                    ) { newY ->
-                        if (newY > pageHeight - bottomMargin) {
-                            pdfDocument.finishPage(currentPage)
-                            currentPage = pdfDocument.startPage(pageInfo)
-                            canvas = currentPage.canvas
-                            80f
-                        } else {
-                            newY
-                        }
-                    }
-                    
-                    yPosition += 5f // Small gap between lines
+                // Parse rich text and render with proper formatting
+                yPosition = parseAndRenderRichTextToPdf(
+                    canvas = canvas,
+                    richTextContent = richTextContent,
+                    startX = leftMargin,
+                    startY = yPosition,
+                    maxWidth = rightMargin - leftMargin,
+                    pageHeight = pageHeight,
+                    bottomMargin = bottomMargin,
+                    bodyPaint = bodyPaint,
+                    pdfDocument = pdfDocument,
+                    pageInfo = pageInfo
+                ) { newPage, newCanvas ->
+                    currentPage = newPage
+                    canvas = newCanvas
                 }
                 
                 yPosition += 20f // Space between chapters
             }
-            
-            pdfDocument.finishPage(currentPage)
+              pdfDocument.finishPage(currentPage)
             
             // Write to file
-            FileOutputStream(outputFile).use { outputStream ->
-                pdfDocument.writeTo(outputStream)
+            try {
+                FileOutputStream(outputFile).use { outputStream ->
+                    pdfDocument.writeTo(outputStream)
+                }
+            } catch (e: Exception) {
+                throw RuntimeException("Failed to write PDF to file: ${e.message}", e)
             }
         } finally {
             pdfDocument.close()
         }
+    }    /**
+     * Parses rich text content and renders it to PDF with proper formatting
+     */
+    private fun parseAndRenderRichTextToPdf(
+        canvas: Canvas,
+        richTextContent: RichTextDocument,
+        startX: Float,
+        startY: Float,
+        maxWidth: Float,
+        pageHeight: Float,
+        bottomMargin: Float,
+        bodyPaint: Paint,
+        pdfDocument: PdfDocument,
+        pageInfo: PdfDocument.PageInfo,
+        onNewPage: (PdfDocument.Page, Canvas) -> Unit
+    ): Float {
+        var currentY = startY
+        var currentCanvas = canvas
+        
+        // Simple helper function to check if new page is needed and handle it
+        fun checkAndHandleNewPage(requiredY: Float): Pair<Float, Canvas> {
+            return if (requiredY > pageHeight - bottomMargin) {
+                val newPage = pdfDocument.startPage(pageInfo)
+                val newCanvas = newPage.canvas
+                onNewPage(newPage, newCanvas)
+                Pair(80f, newCanvas)
+            } else {
+                Pair(requiredY, currentCanvas)
+            }
+        }        
+        // Create different paint styles for formatted text
+        val headerPaint1 = Paint(bodyPaint).apply {
+            textSize = 16f
+            isFakeBoldText = true
+        }
+        
+        val headerPaint2 = Paint(bodyPaint).apply {
+            textSize = 14f
+            isFakeBoldText = true
+        }
+        
+        val headerPaint3 = Paint(bodyPaint).apply {
+            textSize = 12f
+            isFakeBoldText = true
+        }
+        
+        val quotePaint = Paint(bodyPaint).apply {
+            color = Color.GRAY
+            textSize = 11f
+        }
+        
+        val listPaint = Paint(bodyPaint).apply {
+            textSize = 11f
+        }
+        
+        val lines = richTextContent.plainText.split('\n')
+        
+        lines.forEach { line ->
+            val trimmedLine = line.trim()
+            val estimatedLineHeight = when {
+                trimmedLine.startsWith("# ") -> 24f
+                trimmedLine.startsWith("## ") -> 20f
+                trimmedLine.startsWith("### ") -> 16f
+                else -> 16f
+            }
+              if (currentY + estimatedLineHeight > pageHeight - bottomMargin) {
+                val pageResult = checkAndHandleNewPage(currentY + estimatedLineHeight)
+                currentY = pageResult.first
+                currentCanvas = pageResult.second
+            }
+            
+            when {
+                // Empty lines
+                trimmedLine.isEmpty() -> {
+                    currentY += 12f
+                }
+                
+                // Headers
+                trimmedLine.startsWith("### ") -> {                
+                    val headerText = trimmedLine.removePrefix("### ")
+                    currentY = drawWrappedText(
+                        canvas = currentCanvas,
+                        text = headerText,
+                        paint = headerPaint3,
+                        startX = startX,
+                        startY = currentY,
+                        maxWidth = maxWidth,
+                        lineHeight = 18f
+                    ) { newY ->
+                        val pageResult = checkAndHandleNewPage(newY)
+                        currentCanvas = pageResult.second
+                        pageResult.first
+                    }
+                    currentY += 8f
+                }                trimmedLine.startsWith("## ") -> {
+                    val headerText = trimmedLine.removePrefix("## ")
+                    currentY = drawWrappedText(
+                        canvas = currentCanvas,
+                        text = headerText,
+                        paint = headerPaint2,
+                        startX = startX,
+                        startY = currentY,
+                        maxWidth = maxWidth,
+                        lineHeight = 20f
+                    ) { newY ->
+                        val pageResult = checkAndHandleNewPage(newY)
+                        currentCanvas = pageResult.second
+                        pageResult.first
+                    }
+                    currentY += 10f
+                }                trimmedLine.startsWith("# ") -> {
+                    val headerText = trimmedLine.removePrefix("# ")
+                    currentY = drawWrappedText(
+                        canvas = currentCanvas,
+                        text = headerText,
+                        paint = headerPaint1,
+                        startX = startX,
+                        startY = currentY,
+                        maxWidth = maxWidth,
+                        lineHeight = 24f
+                    ) { newY ->
+                        val pageResult = checkAndHandleNewPage(newY)
+                        currentCanvas = pageResult.second
+                        pageResult.first
+                    }
+                    currentY += 12f
+                }                  // Quotes
+                trimmedLine.startsWith("> ") -> {
+                    val quoteText = "  ${trimmedLine.removePrefix("> ")}"
+                    currentY = drawWrappedText(
+                        canvas = currentCanvas,
+                        text = quoteText,
+                        paint = quotePaint,
+                        startX = startX,
+                        startY = currentY,
+                        maxWidth = maxWidth,
+                        lineHeight = 16f
+                    ) { newY ->
+                        val pageResult = checkAndHandleNewPage(newY)
+                        currentCanvas = pageResult.second
+                        pageResult.first
+                    }
+                    currentY += 4f
+                }
+                  // Lists
+                trimmedLine.startsWith("- ") -> {
+                    val listText = "  • ${trimmedLine.removePrefix("- ")}"
+                    currentY = drawWrappedText(
+                        canvas = currentCanvas,
+                        text = listText,
+                        paint = listPaint,
+                        startX = startX,
+                        startY = currentY,
+                        maxWidth = maxWidth,
+                        lineHeight = 16f
+                    ) { newY ->
+                        val pageResult = checkAndHandleNewPage(newY)
+                        currentCanvas = pageResult.second
+                        pageResult.first
+                    }
+                    currentY += 4f
+                }                trimmedLine.matches(Regex("^\\d+\\. .*") ) -> {
+                    val numberPattern = Regex("^(\\d+)\\. (.*)")
+                    val matchResult = numberPattern.find(trimmedLine)
+                    
+                    if (matchResult != null) {
+                        val number = matchResult.groupValues[1]
+                        val listText = matchResult.groupValues[2]
+                        val numberedText = "  $number. $listText"
+                        
+                        currentY = drawWrappedText(
+                            canvas = currentCanvas,
+                            text = numberedText,
+                            paint = listPaint,
+                            startX = startX,
+                            startY = currentY,
+                            maxWidth = maxWidth,
+                            lineHeight = 16f
+                        ) { newY ->
+                            val pageResult = checkAndHandleNewPage(newY)
+                            currentCanvas = pageResult.second
+                            pageResult.first
+                        }
+                        currentY += 4f
+                    }                }
+                
+                else -> {
+                    currentY = drawFormattedText(
+                        canvas = currentCanvas,
+                        text = trimmedLine,
+                        startX = startX,
+                        startY = currentY,
+                        maxWidth = maxWidth,
+                        basePaint = bodyPaint,
+                        lineHeight = 16f
+                    ) { newY ->
+                        val pageResult = checkAndHandleNewPage(newY)
+                        currentCanvas = pageResult.second
+                        pageResult.first
+                    }
+                    currentY += 5f
+                }
+            }
+        }
+        
+        // Don't finish the page here - let the caller handle it
+        return currentY
+    }
+    /**
+     * Draws text with bold and italic inline formatting
+     */
+    private fun drawFormattedText(
+        canvas: Canvas,
+        text: String,
+        startX: Float,
+        startY: Float,
+        maxWidth: Float,
+        basePaint: Paint,
+        lineHeight: Float,
+        onNewPageNeeded: (Float) -> Float
+    ): Float {
+        // If no formatting markers, use simple text drawing
+        if (!text.contains("**") && !text.contains("*")) {
+            return drawWrappedText(canvas, text, basePaint, startX, startY, maxWidth, lineHeight, onNewPageNeeded)
+        }
+        
+        // Parse text with formatting
+        val segments = parseTextWithFormatting(text)
+        var currentY = startY
+        var currentLineX = startX
+        val textBounds = Rect()
+        
+        segments.forEach { segment ->
+            if (segment.text.isNotBlank()) {
+                // Create paint with appropriate formatting
+                val segmentPaint = Paint(basePaint).apply {
+                    isFakeBoldText = segment.isBold
+                    if (segment.isItalic) {
+                        textSkewX = -0.25f // Simulate italic
+                    }
+                }
+                
+                val words = segment.text.split(" ")
+                words.forEachIndexed { index, word ->
+                    val wordWithSpace = if (index == 0) word else " $word"
+                    segmentPaint.getTextBounds(wordWithSpace, 0, wordWithSpace.length, textBounds)
+                    
+                    // Check if word fits on current line
+                    if (currentLineX + textBounds.width() > startX + maxWidth && currentLineX > startX) {
+                        // Move to next line
+                        currentY += lineHeight
+                        currentY = onNewPageNeeded(currentY)
+                        currentLineX = startX
+                    }
+                    
+                    // Draw the word
+                    canvas.drawText(wordWithSpace, currentLineX, currentY, segmentPaint)
+                    currentLineX += textBounds.width()
+                }
+            }
+        }
+        
+        return currentY + lineHeight
     }
     
     /**
@@ -861,6 +1283,56 @@ class ChapterExportService @Inject constructor(
         // Draw the last line
         if (currentLine.isNotEmpty()) {
             canvas.drawText(currentLine.toString(), startX, currentY, paint)
+            currentY += lineHeight
+        }
+          return currentY
+    }
+    
+    /**
+     * Draws centered wrapped text on a canvas, handling page breaks
+     */
+    private fun drawWrappedTextCentered(
+        canvas: Canvas,
+        text: String,
+        paint: Paint,
+        centerX: Float,
+        startY: Float,
+        maxWidth: Float,
+        lineHeight: Float,
+        onNewPageNeeded: (Float) -> Float
+    ): Float {
+        var currentY = startY
+        val words = text.split(" ")
+        var currentLine = StringBuilder()
+        
+        val textBounds = Rect()
+        
+        words.forEach { word ->
+            val testLine = if (currentLine.isEmpty()) word else "${currentLine} $word"
+            paint.getTextBounds(testLine, 0, testLine.length, textBounds)
+            
+            if (textBounds.width() <= maxWidth) {
+                currentLine.append(if (currentLine.isEmpty()) word else " $word")
+            } else {
+                // Draw current line and start new one
+                if (currentLine.isNotEmpty()) {
+                    val lineText = currentLine.toString()
+                    paint.getTextBounds(lineText, 0, lineText.length, textBounds)
+                    val lineX = centerX - textBounds.width() / 2f
+                    canvas.drawText(lineText, lineX, currentY, paint)
+                    currentY += lineHeight
+                    currentY = onNewPageNeeded(currentY)
+                }
+                currentLine = StringBuilder(word)
+            }
+        }
+        
+        // Draw the last line
+        if (currentLine.isNotEmpty()) {
+            val lineText = currentLine.toString()
+            paint.getTextBounds(lineText, 0, lineText.length, textBounds)
+            val lineX = centerX - textBounds.width() / 2f
+            canvas.drawText(lineText, lineX, currentY, paint)
             currentY += lineHeight
         }
         
